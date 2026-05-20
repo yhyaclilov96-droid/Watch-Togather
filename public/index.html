@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="az">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Watch-Together — WebRTC</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="/socket.io/socket.io.js" defer></script>
+    <script src="client.js" defer></script>
+  </head>
+  <body>
+    <div id="auth-screen" class="container">
+      <div class="auth-card">
+        <div class="logo">
+          <h1>Watch<span>Together</span></h1>
+          <p>Ekranda istədiyiniz filmi açın və dostlarınızla paylaşın</p>
+        </div>
+
+        <div class="form-group">
+          <label for="username">İstifadəçi Adınız</label>
+          <input
+            type="text"
+            id="username"
+            placeholder="Məsələn: Əli"
+            autocomplete="off"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="room-code">Otaq Kodu</label>
+          <input
+            type="text"
+            id="room-code"
+            placeholder="Məsələn: MOVIE2026"
+            autocomplete="off"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="room-password">Otaq Parolu</label>
+          <input type="password" id="room-password" placeholder="••••••••" />
+        </div>
+
+        <div class="auth-buttons">
+          <button id="btn-join" class="btn btn-primary">Otağa Qoşul</button>
+          <button id="btn-create" class="btn btn-secondary">
+            Yeni Otaq Yarat
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="player-screen" class="container hidden">
+      <header class="player-header">
+        <div class="room-info">
+          <h2>Otaq: <span id="display-room-code">---</span></h2>
+          <span class="user-badge"
+            >İstifadəçi: <strong id="display-username">---</strong></span
+          >
+        </div>
+        <button id="btn-leave" class="btn btn-danger">Otaqdan Çıx</button>
+      </header>
+
+      <main class="main-content">
+        <section class="video-section">
+          <!-- WebRTC Ekran Paylaşım İdarəetməsi -->
+          <div
+            class="video-url-bar"
+            style="
+              justify-content: center;
+              background: transparent;
+              border: none;
+            "
+          >
+            <button
+              id="btn-share-screen"
+              class="btn btn-primary"
+              style="width: 100%"
+            >
+              🖥️ Filmi Açdığınız Tabı Paylaşın
+            </button>
+            <button
+              id="btn-stop-share"
+              class="btn btn-danger hidden"
+              style="width: 100%"
+            >
+              ⏹️ Paylaşımı Dayandır
+            </button>
+          </div>
+
+          <div class="player-wrapper">
+            <!-- Artıq <source> yoxdur. WebRTC axını bura əlavə olunacaq -->
+            <video id="main-video" autoplay playsinline controls></video>
+          </div>
+        </section>
+
+        <aside class="chat-section">
+          <div class="chat-header">
+            <h3>Otaq Çatı</h3>
+          </div>
+          <div id="chat-messages" class="chat-messages">
+            <div class="system-message">Otağa xoş gəlmisiniz!</div>
+          </div>
+          <div class="chat-input-bar">
+            <input
+              type="text"
+              id="chat-input"
+              placeholder="Mesajınızı yazın..."
+              autocomplete="off"
+            />
+            <button id="btn-send-msg" class="btn btn-primary">Göndər</button>
+          </div>
+        </aside>
+      </main>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,289 @@
+/* Ümumi Stil Tənzimləmələri */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+  background-color: #0f172a; /* Tünd, kinoteatr ab-havası verən fon */
+  color: #f8fafc;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Köməkçi Klasslar */
+.container {
+  width: 100%;
+  max-width: 1200px;
+  padding: 20px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* Düymə (Button) Stilləri */
+.btn {
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    transform 0.1s;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn-primary {
+  background-color: #6366f1;
+  color: white;
+}
+.btn-primary:hover {
+  background-color: #4f46e5;
+}
+.btn-secondary {
+  background-color: #334155;
+  color: #cbd5e1;
+}
+.btn-secondary:hover {
+  background-color: #475569;
+}
+.btn-danger {
+  background-color: #ef4444;
+  color: white;
+}
+.btn-danger:hover {
+  background-color: #dc2626;
+}
+
+/* Giriş Ekranı (Auth Card) */
+.auth-card {
+  background-color: #1e293b;
+  border: 1px solid #334155;
+  padding: 40px;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 450px;
+  margin: 0 auto;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+.logo {
+  text-align: center;
+  margin-bottom: 30px;
+}
+.logo h1 {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -1px;
+}
+.logo h1 span {
+  color: #6366f1;
+}
+.logo p {
+  color: #94a3b8;
+  font-size: 14px;
+  margin-top: 5px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+.form-group label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 8px;
+  color: #cbd5e1;
+}
+.form-group input {
+  width: 100%;
+  padding: 12px 16px;
+  background-color: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  color: white;
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.form-group input:focus {
+  border-color: #6366f1;
+}
+.auth-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 25px;
+}
+
+/* Əsas Pleyer Ekranı Layout Struktur */
+#player-screen {
+  max-width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 15px;
+}
+
+.player-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #1e293b;
+  padding: 15px 25px;
+  border-radius: 12px;
+  margin-bottom: 15px;
+  border: 1px solid #334155;
+}
+
+.room-info {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.room-info h2 {
+  font-size: 18px;
+  font-weight: 600;
+}
+.room-info h2 span {
+  color: #6366f1;
+}
+
+.user-badge {
+  background-color: #0f172a;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #94a3b8;
+}
+.user-badge strong {
+  color: #f8fafc;
+}
+
+/* Əsas Giriş Paneli (Video + Chat yan-yana) */
+.main-content {
+  display: grid;
+  grid-template-columns: 1fr 350px; /* Video geniş yer tutur, chat isə 350px */
+  gap: 15px;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Video Bölməsi Stilləri */
+.video-section {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  background-color: #1e293b;
+  border-radius: 12px;
+  padding: 15px;
+  border: 1px solid #334155;
+}
+
+.video-url-bar {
+  display: flex;
+  gap: 10px;
+}
+.video-url-bar input {
+  flex: 1;
+  padding: 12px;
+  background-color: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  color: white;
+  outline: none;
+}
+.video-url-bar input:focus {
+  border-color: #6366f1;
+}
+
+.player-wrapper {
+  flex: 1;
+  background-color: #000;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.player-wrapper video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Chat Bölməsi Stilləri */
+.chat-section {
+  display: flex;
+  flex-direction: column;
+  background-color: #1e293b;
+  border-radius: 12px;
+  border: 1px solid #334155;
+  overflow: hidden;
+}
+
+.chat-header {
+  padding: 15px;
+  background-color: #1e293b;
+  border-bottom: 1px solid #334155;
+}
+
+.chat-messages {
+  flex: 1;
+  padding: 15px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.system-message {
+  font-size: 12px;
+  color: #94a3b8;
+  text-align: center;
+  font-style: italic;
+  margin: 5px 0;
+}
+
+.chat-input-bar {
+  padding: 15px;
+  background-color: #1e293b;
+  border-top: 1px solid #334155;
+  display: flex;
+  gap: 10px;
+}
+
+.chat-input-bar input {
+  flex: 1;
+  padding: 10px 12px;
+  background-color: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  color: white;
+  outline: none;
+  font-size: 14px;
+}
+.chat-input-bar input:focus {
+  border-color: #6366f1;
+}
+
+/* Mobil Cihazlar Üçün Reaktivlik (Responsive) */
+@media (max-width: 900px) {
+  .main-content {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 300px;
+  }
+  #player-screen {
+    height: auto;
+  }
+}
