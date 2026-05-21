@@ -12,10 +12,8 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: #000;
 
   background-image: url("Back-Ground-Foto.png");
-
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -30,21 +28,7 @@ body {
     ),
     url("Back-Ground-Foto.png");
 
-  color: #f8fafc;
-  min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-
   position: relative;
-  background-image:
-    radial-gradient(
-      circle,
-      rgba(0, 0, 0, 0) 0%,
-      rgba(0, 0, 0, 0.5) 50%,
-      rgba(0, 0, 0, 1) 100%
-    ),
-    url("Back-Ground-Foto.png");
 }
 
 .container {
@@ -252,7 +236,7 @@ body {
   object-fit: contain;
 }
 
-/* Chat Bölməsi Stilləri */
+/* Çat Bölməsi Stilləri */
 .chat-section {
   display: flex;
   flex-direction: column;
@@ -274,7 +258,64 @@ body {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
+}
+
+/* İncə Scrollbar (Çat üçün daha qəşəng görünüş) */
+.chat-messages::-webkit-scrollbar {
+  width: 6px;
+}
+.chat-messages::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 10px;
+}
+.chat-messages::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* YENİ: Qarşılıqlı Şar (Bubble) Dizaynı */
+.chat-msg-row {
+  display: flex;
+  width: 100%;
+}
+
+.chat-msg-row.me {
+  justify-content: flex-end;
+}
+
+.chat-msg-row.other {
+  justify-content: flex-start;
+}
+
+.chat-bubble-container {
+  max-width: 80%;
+}
+
+.chat-bubble {
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-size: 14px;
+  line-height: 1.4;
+  word-wrap: break-word;
+  color: #fff;
+}
+
+.chat-msg-row.me .chat-bubble {
+  background-color: #6366f1; /* Sənin dizayna uyğun mavi/bənövşəyi */
+  border-bottom-right-radius: 4px;
+}
+
+.chat-msg-row.other .chat-bubble {
+  background-color: #334155; /* Sənin dizayna uyğun tünd boz */
+  border-bottom-left-radius: 4px;
+}
+
+.chat-sender {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-bottom: 4px;
+  margin-left: 5px;
+  display: block;
 }
 
 .system-message {
@@ -283,8 +324,12 @@ body {
   text-align: center;
   font-style: italic;
   margin: 5px 0;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 5px;
+  border-radius: 8px;
 }
 
+/* Çat İnput Bölməsi */
 .chat-input-bar {
   padding: 15px;
   background-color: #1e293b;

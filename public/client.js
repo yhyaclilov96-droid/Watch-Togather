@@ -77,6 +77,7 @@ btnSendMsg.addEventListener("click", sendMsg);
 chatInput.addEventListener("keypress", (e) => {
   if (e.key === "Enter") sendMsg();
 });
+
 function sendMsg() {
   const msg = chatInput.value.trim();
   if (msg) {
@@ -88,18 +89,53 @@ function sendMsg() {
     chatInput.value = "";
   }
 }
-socket.on("receive-chat", ({ username, message }) =>
-  addMessageToChat(`<strong>${username}:</strong> ${message}`),
-);
-socket.on("sys-message", (message) =>
-  addMessageToChat(`<span class="system-message">${message}</span>`),
-);
-function addMessageToChat(html) {
+
+// --- YENİLƏNMİŞ ÇAT MƏNTİQİ (Şar / Bubble Sistemi) ---
+socket.on("receive-chat", ({ username, message }) => {
+  const isMe = username === currentUser;
+  appendBubbleToChat(username, message, isMe);
+});
+
+socket.on("sys-message", (message) => {
   const div = document.createElement("div");
-  div.innerHTML = html;
+  div.className = "system-message";
+  div.innerText = message;
   chatMessages.appendChild(div);
   chatMessages.scrollTop = chatMessages.scrollHeight;
+});
+
+function appendBubbleToChat(senderName, message, isMe) {
+  const rowDiv = document.createElement("div");
+  rowDiv.className = `chat-msg-row ${isMe ? "me" : "other"}`;
+
+  const bubbleContainer = document.createElement("div");
+  bubbleContainer.className = "chat-bubble-container";
+
+  // Əgər mesaj başqasındandırsa, adını qutunun üstünə yaz
+  if (!isMe) {
+    const senderSpan = document.createElement("span");
+    senderSpan.className = "chat-sender";
+    senderSpan.innerText = senderName;
+    bubbleContainer.appendChild(senderSpan);
+  }
+
+  // Əsas mesaj qutusu
+  const bubble = document.createElement("div");
+  bubble.className = "chat-bubble";
+  bubble.innerText = message;
+
+  bubbleContainer.appendChild(bubble);
+  rowDiv.appendChild(bubbleContainer);
+  chatMessages.appendChild(rowDiv);
+
+  // Limit qoruyucu: Ekran donmasın deyə 150 mesajdan çoxunu silir
+  if (chatMessages.children.length > 150) {
+    chatMessages.removeChild(chatMessages.firstChild);
+  }
+
+  chatMessages.scrollTop = chatMessages.scrollHeight;
 }
+
 btnLeave.addEventListener("click", () => window.location.reload());
 
 // --- WEBRTC EKRAN PAYLAŞIMI MƏNTİQİ ---
@@ -165,7 +201,7 @@ socket.on("watcher-request", async (watcherId) => {
     }
   };
 
-  // --- YENİ: Yayımçı tərəfində bağlantı qopmasını izləmək ---
+  // Yayımçı tərəfində bağlantı qopmasını izləmək
   pc.oniceconnectionstatechange = () => {
     if (
       pc.iceConnectionState === "disconnected" ||
@@ -200,7 +236,7 @@ socket.on("webrtc-offer", async ({ broadcasterId, sdp }) => {
     }
   };
 
-  // --- YENİ: İzləyici (iPhone) tərəfində bağlantı qoparsa avtomatik yenidən qoşulma ---
+  // İzləyici (iPhone) tərəfində bağlantı qoparsa avtomatik yenidən qoşulma
   viewerConnection.oniceconnectionstatechange = () => {
     if (
       viewerConnection.iceConnectionState === "disconnected" ||
@@ -245,7 +281,9 @@ socket.on("broadcaster-stopped", () => {
     viewerConnection.close();
     viewerConnection = null;
   }
-  addMessageToChat(
-    '<span class="system-message">Ekran paylaşımı dayandırıldı.</span>',
-  );
+  const div = document.createElement("div");
+  div.className = "system-message";
+  div.innerText = "Ekran paylaşımı dayandırıldı.";
+  chatMessages.appendChild(div);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
 });
