@@ -20,16 +20,28 @@ const btnShareScreen = document.getElementById("btn-share-screen");
 const btnStopShare = document.getElementById("btn-stop-share");
 const videoPlayer = document.getElementById("main-video");
 
+// --- YENİ: iPhone/iOS ÜÇÜN KRİTİK VİDEO AYARLARI ---
+videoPlayer.autoplay = true;
+videoPlayer.playsInline = true;
+videoPlayer.setAttribute("playsinline", "true"); // Safari üçün məcburi
+
 let currentRoom = null;
 let currentUser = null;
 
 // WebRTC Dəyişənləri
 let localStream = null;
-let peerConnections = {}; // Yayımçının birdən çox izləyicisi olacağı üçün obyekt
-let viewerConnection = null; // İzləyicinin yalnız bir yayımçı ilə əlaqəsi olacaq
-const config = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+let peerConnections = {};
+let viewerConnection = null;
 
-// --- GİRİŞ VƏ ÇAT (Əvvəlki kimidir) ---
+// --- YENİ: STUN Serverləri (Daha etibarlı P2P əlaqəsi üçün) ---
+const config = {
+  iceServers: [
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" },
+  ],
+};
+
+// --- GİRİŞ VƏ ÇAT ---
 btnCreate.addEventListener("click", () => {
   const data = getAuthData();
   if (data) socket.emit("create-room", data);
@@ -95,23 +107,19 @@ btnLeave.addEventListener("click", () => window.location.reload());
 // 1. Host "Ekranı Paylaş" düyməsinə basır
 btnShareScreen.addEventListener("click", async () => {
   try {
-    // Brauzerdən ekranı və *SƏSİ* istəyirik
     localStream = await navigator.mediaDevices.getDisplayMedia({
       video: true,
-      audio: true, // MÜTLƏQ: Səs paylaşımını aktivləşdirmək üçün
+      audio: true,
     });
 
-    // Özümüz də görək deyə pleyerə veririk, amma səs əks-səda (echo) verməsin deyə özümüzdə səssiz edirik
     videoPlayer.srcObject = localStream;
     videoPlayer.muted = true;
 
     btnShareScreen.classList.add("hidden");
     btnStopShare.classList.remove("hidden");
 
-    // Serverə xəbər veririk ki, biz artıq otaqda yayımcıyıq
     socket.emit("register-broadcaster", currentRoom);
 
-    // Əgər istifadəçi brauzerin özünün yuxarıdakı "Stop sharing" düyməsinə basarsa
     localStream.getVideoTracks()[0].onended = () => stopSharing();
   } catch (err) {
     console.error("Paylaşım xətası:", err);
@@ -129,19 +137,15 @@ function stopSharing() {
   btnShareScreen.classList.remove("hidden");
   btnStopShare.classList.add("hidden");
 
-  // Serverə yayımın bitdiyini xəbər veririk
   socket.emit("broadcaster-disconnected", currentRoom);
 
-  // Bütün P2P əlaqələrini kəsirik
   for (let id in peerConnections) {
     peerConnections[id].close();
     delete peerConnections[id];
   }
 }
 
-// 2. İzləyici otağa girəndə (və ya otaqdaykən) yayımcının olduğunu öyrənir
 socket.on("broadcaster-active", (broadcasterId) => {
-  // Yayımcıdan videonu istəyirik
   socket.emit("watcher-request", { broadcasterId });
 });
 
@@ -150,7 +154,6 @@ socket.on("watcher-request", async (watcherId) => {
   const pc = new RTCPeerConnection(config);
   peerConnections[watcherId] = pc;
 
-  // Yayımçı öz video və səs treklərini bağlantıya əlavə edir
   localStream.getTracks().forEach((track) => pc.addTrack(track, localStream));
 
   pc.onicecandidate = (event) => {
@@ -159,6 +162,18 @@ socket.on("watcher-request", async (watcherId) => {
         target: watcherId,
         candidate: event.candidate,
       });
+    }
+  };
+
+  // --- YENİ: Yayımçı tərəfində bağlantı qopmasını izləmək ---
+  pc.oniceconnectionstatechange = () => {
+    if (
+      pc.iceConnectionState === "disconnected" ||
+      pc.iceConnectionState === "failed"
+    ) {
+      console.log("İzləyici ilə əlaqə kəsildi (Bağlantı təmizlənir)");
+      pc.close();
+      delete peerConnections[watcherId];
     }
   };
 
@@ -171,10 +186,9 @@ socket.on("watcher-request", async (watcherId) => {
 socket.on("webrtc-offer", async ({ broadcasterId, sdp }) => {
   viewerConnection = new RTCPeerConnection(config);
 
-  // Video axını gələndə pleyerdə açır
   viewerConnection.ontrack = (event) => {
     videoPlayer.srcObject = event.streams[0];
-    videoPlayer.muted = false; // İzləyici filmin səsini eşitməlidir
+    videoPlayer.muted = false;
   };
 
   viewerConnection.onicecandidate = (event) => {
@@ -183,6 +197,19 @@ socket.on("webrtc-offer", async ({ broadcasterId, sdp }) => {
         target: broadcasterId,
         candidate: event.candidate,
       });
+    }
+  };
+
+  // --- YENİ: İzləyici (iPhone) tərəfində bağlantı qoparsa avtomatik yenidən qoşulma ---
+  viewerConnection.oniceconnectionstatechange = () => {
+    if (
+      viewerConnection.iceConnectionState === "disconnected" ||
+      viewerConnection.iceConnectionState === "failed"
+    ) {
+      console.log(
+        "Yayımçı ilə əlaqə kəsildi. Yenidən qoşulmağa cəhd edilir...",
+      );
+      socket.emit("watcher-request", { broadcasterId });
     }
   };
 
