@@ -1,4 +1,13 @@
-const socket = io();
+const SESSION_KEY = "watchTogether_session";
+const WAS_BROADCASTER_KEY = "watchTogether_wasBroadcaster";
+
+const socket = io({
+  reconnection: true,
+  reconnectionAttempts: Infinity,
+  reconnectionDelay: 1000,
+  reconnectionDelayMax: 8000,
+  timeout: 20000,
+});
 
 // DOM Elementləri
 const authScreen = document.getElementById("auth-screen");
@@ -30,6 +39,8 @@ videoPlayer.setAttribute("playsinline", "true"); // Safari üçün məcburi
 
 let currentRoom = null;
 let currentUser = null;
+let isRejoining = false;
+let connectionBanner = null;
 
 // WebRTC Dəyişənləri
 let localStream = null;
@@ -65,15 +76,126 @@ function getAvatarColor(name) {
   return colors[Math.abs(hash) % colors.length];
 }
 
+// --- Sessiya (localStorage) ---
+function saveSession({ username, roomCode, password }) {
+  localStorage.setItem(
+    SESSION_KEY,
+    JSON.stringify({ username, roomCode, password }),
+  );
+}
+
+function loadSession() {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function clearSession() {
+  localStorage.removeItem(SESSION_KEY);
+  sessionStorage.removeItem(WAS_BROADCASTER_KEY);
+}
+
+function restoreAuthFields() {
+  const session = loadSession();
+  if (!session) return;
+  inputUsername.value = session.username || "";
+  inputRoomCode.value = session.roomCode || "";
+  inputRoomPass.value = session.password || "";
+}
+
+function showConnectionBanner(text) {
+  if (!connectionBanner) {
+    connectionBanner = document.createElement("div");
+    connectionBanner.id = "connection-banner";
+    connectionBanner.className = "connection-banner hidden";
+    document.body.appendChild(connectionBanner);
+  }
+  if (!text) {
+    connectionBanner.classList.add("hidden");
+    return;
+  }
+  connectionBanner.innerText = text;
+  connectionBanner.classList.remove("hidden");
+}
+
+function enterRoomUI({ roomCode, username }) {
+  currentRoom = roomCode;
+  currentUser = username;
+  authScreen.classList.add("hidden");
+  playerScreen.classList.remove("hidden");
+  document.body.classList.add("in-room");
+  displayRoomCode.innerText = roomCode;
+  displayUsername.innerText = username;
+  userAvatar.innerText = getAvatarInitial(username);
+  userAvatar.style.backgroundColor = getAvatarColor(username);
+  updateVideoPlaceholder();
+}
+
+function attemptRejoin() {
+  const session = loadSession();
+  if (!session || !socket.connected || isRejoining) return;
+
+  isRejoining = true;
+  showConnectionBanner("Yenidən qoşulur...");
+  socket.emit("rejoin-room", session);
+}
+
+function onRoomJoined({ roomCode, username, reconnected }) {
+  isRejoining = false;
+  showConnectionBanner(null);
+
+  const session = loadSession();
+  if (session) {
+    saveSession({
+      username,
+      roomCode,
+      password: session.password,
+    });
+  }
+
+  const wasInRoom = !!currentRoom;
+  enterRoomUI({ roomCode, username });
+
+  if (!wasInRoom && !reconnected) {
+    resetChat();
+  } else if (reconnected) {
+    appendSystemMessage("Yenidən qoşuldunuz.");
+    if (localStream) {
+      socket.emit("register-broadcaster", currentRoom);
+      sessionStorage.setItem(WAS_BROADCASTER_KEY, "1");
+    }
+  }
+
+  restoreWebRTCAfterRejoin();
+}
+
+function restoreWebRTCAfterRejoin() {
+  if (viewerConnection) {
+    viewerConnection.close();
+    viewerConnection = null;
+  }
+}
+
 // --- GİRİŞ VƏ ÇAT ---
 btnCreate.addEventListener("click", () => {
   const data = getAuthData();
-  if (data) socket.emit("create-room", data);
+  if (data) {
+    isRejoining = false;
+    saveSession(data);
+    socket.emit("create-room", data);
+  }
 });
 
 btnJoin.addEventListener("click", () => {
   const data = getAuthData();
-  if (data) socket.emit("join-room", data);
+  if (data) {
+    isRejoining = false;
+    saveSession(data);
+    socket.emit("join-room", data);
+  }
 });
 
 function getAuthData() {
@@ -87,20 +209,60 @@ function getAuthData() {
   return { username, roomCode, password };
 }
 
-socket.on("error-msg", (msg) => alert(msg));
-socket.on("room-joined", ({ roomCode, username }) => {
-  currentRoom = roomCode;
-  currentUser = username;
-  authScreen.classList.add("hidden");
-  playerScreen.classList.remove("hidden");
-  document.body.classList.add("in-room");
-  displayRoomCode.innerText = roomCode;
-  displayUsername.innerText = username;
-  userAvatar.innerText = getAvatarInitial(username);
-  userAvatar.style.backgroundColor = getAvatarColor(username);
-  resetChat();
-  updateVideoPlaceholder();
+socket.on("error-msg", (msg) => {
+  isRejoining = false;
+  showConnectionBanner(null);
+  alert(msg);
 });
+
+socket.on("session-expired", () => {
+  isRejoining = false;
+  clearSession();
+  showConnectionBanner(null);
+  currentRoom = null;
+  currentUser = null;
+  authScreen.classList.remove("hidden");
+  playerScreen.classList.add("hidden");
+  document.body.classList.remove("in-room");
+  alert("Otaq artıq mövcud deyil. Yenidən qoşulun.");
+});
+
+socket.on("room-joined", onRoomJoined);
+
+socket.on("connect", () => {
+  if (loadSession()) attemptRejoin();
+});
+
+socket.on("disconnect", (reason) => {
+  if (loadSession() && reason !== "io client disconnect") {
+    showConnectionBanner("Əlaqə kəsildi. Yenidən qoşulur...");
+  }
+});
+
+socket.on("reconnect", () => {
+  attemptRejoin();
+});
+
+socket.on("reconnect_failed", () => {
+  isRejoining = false;
+  showConnectionBanner("Serverə qoşulmaq mümkün olmadı.");
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && loadSession()) {
+    if (!socket.connected) socket.connect();
+    else attemptRejoin();
+  }
+});
+
+window.addEventListener("pageshow", (event) => {
+  if (event.persisted || loadSession()) {
+    restoreAuthFields();
+    if (socket.connected) attemptRejoin();
+  }
+});
+
+restoreAuthFields();
 
 btnCopyRoom.addEventListener("click", async () => {
   if (!currentRoom) return;
@@ -212,7 +374,11 @@ function appendBubbleToChat(senderName, message, isMe) {
   appendToChat(rowDiv);
 }
 
-btnLeave.addEventListener("click", () => window.location.reload());
+btnLeave.addEventListener("click", () => {
+  clearSession();
+  socket.disconnect();
+  window.location.reload();
+});
 
 // --- WEBRTC EKRAN PAYLAŞIMI MƏNTİQİ ---
 
@@ -232,6 +398,7 @@ btnShareScreen.addEventListener("click", async () => {
     btnStopShare.classList.remove("hidden");
 
     socket.emit("register-broadcaster", currentRoom);
+    sessionStorage.setItem(WAS_BROADCASTER_KEY, "1");
 
     localStream.getVideoTracks()[0].onended = () => stopSharing();
   } catch (err) {
@@ -252,6 +419,7 @@ function stopSharing() {
   btnStopShare.classList.add("hidden");
 
   socket.emit("broadcaster-disconnected", currentRoom);
+  sessionStorage.removeItem(WAS_BROADCASTER_KEY);
 
   for (let id in peerConnections) {
     peerConnections[id].close();

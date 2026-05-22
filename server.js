@@ -22,6 +22,7 @@ io.on("connection", (socket) => {
       password: password,
       users: [{ id: socket.id, username: username }],
       broadcaster: null,
+      broadcasterUsername: null,
     };
     socket.join(roomCode);
     socket.emit("room-joined", { roomCode, username });
@@ -40,7 +41,43 @@ io.on("connection", (socket) => {
 
     // Otaqda artıq yayım edən (ekran paylaşan) varsa, yeni gələnə xəbər ver
     if (room.broadcaster) {
-      socket.emit("broadcaster-active", room.broadcaster);
+      const broadcasterSocket = io.sockets.sockets.get(room.broadcaster);
+      if (broadcasterSocket) {
+        socket.emit("broadcaster-active", room.broadcaster);
+      } else {
+        room.broadcaster = null;
+        room.broadcasterUsername = null;
+      }
+    }
+  });
+
+  // Sessiya bərpası (yenidən qoşulma / səhifə yenilənməsi)
+  socket.on("rejoin-room", ({ username, roomCode, password }) => {
+    const room = rooms[roomCode];
+    if (!room) {
+      return socket.emit("session-expired");
+    }
+    if (room.password !== password) {
+      return socket.emit("error-msg", "Parol yanlışdır.");
+    }
+
+    room.users = room.users.filter((u) => u.username !== username);
+    room.users.push({ id: socket.id, username });
+
+    socket.join(roomCode);
+    socket.emit("room-joined", { roomCode, username, reconnected: true });
+
+    if (room.broadcasterUsername === username) {
+      room.broadcaster = socket.id;
+      socket.to(roomCode).emit("broadcaster-active", socket.id);
+    } else if (room.broadcaster) {
+      const broadcasterSocket = io.sockets.sockets.get(room.broadcaster);
+      if (broadcasterSocket) {
+        socket.emit("broadcaster-active", room.broadcaster);
+      } else {
+        room.broadcaster = null;
+        room.broadcasterUsername = null;
+      }
     }
   });
 
@@ -48,7 +85,12 @@ io.on("connection", (socket) => {
 
   // 1. Ekranı paylaşan şəxs özünü otağa qeydiyyatdan keçirir
   socket.on("register-broadcaster", (roomCode) => {
-    if (rooms[roomCode]) rooms[roomCode].broadcaster = socket.id;
+    const room = rooms[roomCode];
+    if (!room) return;
+
+    const user = room.users.find((u) => u.id === socket.id);
+    room.broadcaster = socket.id;
+    room.broadcasterUsername = user ? user.username : null;
     socket.to(roomCode).emit("broadcaster-active", socket.id);
   });
 
@@ -78,7 +120,10 @@ io.on("connection", (socket) => {
 
   // Yayımçı paylaşımı dayandıranda
   socket.on("broadcaster-disconnected", (roomCode) => {
-    if (rooms[roomCode]) rooms[roomCode].broadcaster = null;
+    const room = rooms[roomCode];
+    if (!room) return;
+    room.broadcaster = null;
+    room.broadcasterUsername = null;
     socket.to(roomCode).emit("broadcaster-stopped");
   });
 
@@ -100,6 +145,7 @@ io.on("connection", (socket) => {
         // Əgər ayrılan şəxs ekranı paylaşan idisə
         if (room.broadcaster === socket.id) {
           room.broadcaster = null;
+          room.broadcasterUsername = null;
           socket.to(roomCode).emit("broadcaster-stopped");
         }
 
