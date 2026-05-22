@@ -166,7 +166,7 @@ function onRoomJoined({ roomCode, username, reconnected }) {
   } else if (reconnected) {
     appendSystemMessage("Yenidən qoşuldunuz.");
     if (localStream) {
-      socket.emit("register-broadcaster", currentRoom);
+      socket.emit("register-broadcaster");
       sessionStorage.setItem(WAS_BROADCASTER_KEY, "1");
     }
   }
@@ -292,11 +292,7 @@ chatInput.addEventListener("keypress", (e) => {
 function sendMsg() {
   const msg = chatInput.value.trim();
   if (msg) {
-    socket.emit("send-chat", {
-      roomCode: currentRoom,
-      username: currentUser,
-      message: msg,
-    });
+    socket.emit("send-chat", { message: msg });
     chatInput.value = "";
   }
 }
@@ -449,7 +445,7 @@ btnShareScreen.addEventListener("click", async () => {
     btnShareScreen.classList.add("hidden");
     btnStopShare.classList.remove("hidden");
 
-    socket.emit("register-broadcaster", currentRoom);
+    socket.emit("register-broadcaster");
     sessionStorage.setItem(WAS_BROADCASTER_KEY, "1");
 
     localStream.getVideoTracks()[0].onended = () => stopSharing();
@@ -470,7 +466,7 @@ function stopSharing() {
   btnShareScreen.classList.remove("hidden");
   btnStopShare.classList.add("hidden");
 
-  socket.emit("broadcaster-disconnected", currentRoom);
+  socket.emit("broadcaster-disconnected");
   sessionStorage.removeItem(WAS_BROADCASTER_KEY);
 
   for (let id in peerConnections) {
