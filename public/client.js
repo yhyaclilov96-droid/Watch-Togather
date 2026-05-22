@@ -71,6 +71,7 @@ socket.on("room-joined", ({ roomCode, username }) => {
   playerScreen.classList.remove("hidden");
   displayRoomCode.innerText = roomCode;
   displayUsername.innerText = username;
+  resetChat();
 });
 
 btnSendMsg.addEventListener("click", sendMsg);
@@ -90,18 +91,40 @@ function sendMsg() {
   }
 }
 
-// --- YENİLƏNMİŞ ÇAT MƏNTİQİ (Şar / Bubble Sistemi) ---
+// --- ÇAT MƏNTİQİ (Şar / Bubble Sistemi) ---
+const MAX_CHAT_MESSAGES = 100;
+
+function resetChat() {
+  chatMessages.innerHTML = "";
+  appendSystemMessage("Otağa xoş gəlmisiniz!");
+}
+
+function trimChatMessages() {
+  while (chatMessages.children.length > MAX_CHAT_MESSAGES) {
+    chatMessages.removeChild(chatMessages.firstChild);
+  }
+}
+
+function appendToChat(node) {
+  chatMessages.appendChild(node);
+  trimChatMessages();
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function appendSystemMessage(message) {
+  const div = document.createElement("div");
+  div.className = "system-message";
+  div.innerText = message;
+  appendToChat(div);
+}
+
 socket.on("receive-chat", ({ username, message }) => {
   const isMe = username === currentUser;
   appendBubbleToChat(username, message, isMe);
 });
 
 socket.on("sys-message", (message) => {
-  const div = document.createElement("div");
-  div.className = "system-message";
-  div.innerText = message;
-  chatMessages.appendChild(div);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
+  appendSystemMessage(message);
 });
 
 function appendBubbleToChat(senderName, message, isMe) {
@@ -111,7 +134,6 @@ function appendBubbleToChat(senderName, message, isMe) {
   const bubbleContainer = document.createElement("div");
   bubbleContainer.className = "chat-bubble-container";
 
-  // Əgər mesaj başqasındandırsa, adını qutunun üstünə yaz
   if (!isMe) {
     const senderSpan = document.createElement("span");
     senderSpan.className = "chat-sender";
@@ -119,21 +141,13 @@ function appendBubbleToChat(senderName, message, isMe) {
     bubbleContainer.appendChild(senderSpan);
   }
 
-  // Əsas mesaj qutusu
   const bubble = document.createElement("div");
   bubble.className = "chat-bubble";
   bubble.innerText = message;
 
   bubbleContainer.appendChild(bubble);
   rowDiv.appendChild(bubbleContainer);
-  chatMessages.appendChild(rowDiv);
-
-  // Limit qoruyucu: Ekran donmasın deyə 150 mesajdan çoxunu silir
-  if (chatMessages.children.length > 150) {
-    chatMessages.removeChild(chatMessages.firstChild);
-  }
-
-  chatMessages.scrollTop = chatMessages.scrollHeight;
+  appendToChat(rowDiv);
 }
 
 btnLeave.addEventListener("click", () => window.location.reload());
@@ -281,9 +295,5 @@ socket.on("broadcaster-stopped", () => {
     viewerConnection.close();
     viewerConnection = null;
   }
-  const div = document.createElement("div");
-  div.className = "system-message";
-  div.innerText = "Ekran paylaşımı dayandırıldı.";
-  chatMessages.appendChild(div);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
+  appendSystemMessage("Ekran paylaşımı dayandırıldı.");
 });

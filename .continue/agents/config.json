@@ -1,0 +1,22 @@
+{
+  "models": [
+    {
+      "title": "Gemini 3.5 Flash",
+      "provider": "google-generative-ai",
+      "model": "gemini-3.5-flash",
+      "apiKey": "AIzaSyCivaepgprpRBLVC4pqvA1NsfQ7AtSOEUI"
+    },
+    {
+      "title": "Gemini 3.1 Pro",
+      "provider": "google-generative-ai",
+      "model": "gemini-3.1-pro",
+      "apiKey": "AIzaSyCivaepgprpRBLVC4pqvA1NsfQ7AtSOEUI"
+    }
+  ],
+  "tabAutocompleteModel": {
+    "title": "Gemini 3.1 Flash Lite",
+    "provider": "google-generative-ai",
+    "model": "gemini-3.1-flash-lite",
+    "apiKey": "AIzaSyCivaepgprpRBLVC4pqvA1NsfQ7AtSOEUI"
+  }
+}
