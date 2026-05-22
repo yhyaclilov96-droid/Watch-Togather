@@ -26,6 +26,8 @@ const playerWrapper = document.querySelector(".player-wrapper");
 const chatMessages = document.getElementById("chat-messages");
 const chatInput = document.getElementById("chat-input");
 const btnSendMsg = document.getElementById("btn-send-msg");
+const userListEl = document.getElementById("user-list");
+const userListCountEl = document.getElementById("user-list-count");
 
 // WebRTC Elementləri
 const btnShareScreen = document.getElementById("btn-share-screen");
@@ -325,6 +327,56 @@ function appendSystemMessage(message) {
   div.innerText = message;
   appendToChat(div);
 }
+
+const ADMIN_CROWN_SVG = `<svg class="admin-icon" viewBox="0 0 24 24" fill="currentColor" aria-label="Admin">
+  <path d="M12 2l2.4 7.2H22l-6 4.6 2.3 7.2L12 16.8l-6.3 4.2 2.3-7.2-6-4.6h7.6L12 2z"/>
+</svg>`;
+
+function renderUserList({ users, count }) {
+  userListEl.innerHTML = "";
+  userListCountEl.innerText = count ?? users.length;
+
+  if (!users.length) {
+    const empty = document.createElement("li");
+    empty.className = "user-list-empty";
+    empty.innerText = "Hələ heç kim yoxdur";
+    userListEl.appendChild(empty);
+    return;
+  }
+
+  users.forEach(({ username, isAdmin }) => {
+    const li = document.createElement("li");
+    li.className = `user-list-item${username === currentUser ? " is-me" : ""}`;
+
+    const avatar = document.createElement("div");
+    avatar.className = "user-list-avatar";
+    avatar.innerText = getAvatarInitial(username);
+    avatar.style.backgroundColor = getAvatarColor(username);
+
+    const nameWrap = document.createElement("div");
+    nameWrap.className = "user-list-name-wrap";
+
+    const name = document.createElement("span");
+    name.className = "user-list-name";
+    name.innerText = username === currentUser ? `${username} (Siz)` : username;
+
+    nameWrap.appendChild(name);
+
+    if (isAdmin) {
+      const badge = document.createElement("span");
+      badge.className = "user-list-admin-badge";
+      badge.title = "Otaq admini";
+      badge.innerHTML = ADMIN_CROWN_SVG;
+      nameWrap.appendChild(badge);
+    }
+
+    li.appendChild(avatar);
+    li.appendChild(nameWrap);
+    userListEl.appendChild(li);
+  });
+}
+
+socket.on("updateUserList", renderUserList);
 
 socket.on("receive-chat", ({ username, message }) => {
   const isMe = username === currentUser;

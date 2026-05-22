@@ -11,6 +11,22 @@ app.use(express.static(path.join(__dirname, "public")));
 
 const rooms = {};
 
+function buildUserListPayload(room) {
+  return {
+    users: room.users.map((u) => ({
+      username: u.username,
+      isAdmin: u.username === room.adminUsername,
+    })),
+    count: room.users.length,
+  };
+}
+
+function emitUserList(roomCode) {
+  const room = rooms[roomCode];
+  if (!room) return;
+  io.to(roomCode).emit("updateUserList", buildUserListPayload(room));
+}
+
 io.on("connection", (socket) => {
   console.log(`Yeni istifadəçi: ${socket.id}`);
 
@@ -21,11 +37,13 @@ io.on("connection", (socket) => {
     rooms[roomCode] = {
       password: password,
       users: [{ id: socket.id, username: username }],
+      adminUsername: username,
       broadcaster: null,
       broadcasterUsername: null,
     };
     socket.join(roomCode);
     socket.emit("room-joined", { roomCode, username });
+    emitUserList(roomCode);
   });
 
   socket.on("join-room", ({ username, roomCode, password }) => {
@@ -38,6 +56,7 @@ io.on("connection", (socket) => {
     socket.join(roomCode);
     socket.emit("room-joined", { roomCode, username });
     socket.to(roomCode).emit("sys-message", `${username} otağa qoşuldu.`);
+    emitUserList(roomCode);
 
     // Otaqda artıq yayım edən (ekran paylaşan) varsa, yeni gələnə xəbər ver
     if (room.broadcaster) {
@@ -66,6 +85,7 @@ io.on("connection", (socket) => {
 
     socket.join(roomCode);
     socket.emit("room-joined", { roomCode, username, reconnected: true });
+    emitUserList(roomCode);
 
     if (room.broadcasterUsername === username) {
       room.broadcaster = socket.id;
@@ -149,7 +169,11 @@ io.on("connection", (socket) => {
           socket.to(roomCode).emit("broadcaster-stopped");
         }
 
-        if (room.users.length === 0) delete rooms[roomCode];
+        if (room.users.length === 0) {
+          delete rooms[roomCode];
+        } else {
+          emitUserList(roomCode);
+        }
         break;
       }
     }
