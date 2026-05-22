@@ -10,7 +10,10 @@ const btnCreate = document.getElementById("btn-create");
 const btnJoin = document.getElementById("btn-join");
 const displayRoomCode = document.getElementById("display-room-code");
 const displayUsername = document.getElementById("display-username");
+const userAvatar = document.getElementById("user-avatar");
+const btnCopyRoom = document.getElementById("btn-copy-room");
 const btnLeave = document.getElementById("btn-leave");
+const playerWrapper = document.querySelector(".player-wrapper");
 const chatMessages = document.getElementById("chat-messages");
 const chatInput = document.getElementById("chat-input");
 const btnSendMsg = document.getElementById("btn-send-msg");
@@ -41,6 +44,27 @@ const config = {
   ],
 };
 
+function getAvatarInitial(name) {
+  return (name || "?").charAt(0).toUpperCase();
+}
+
+function getAvatarColor(name) {
+  const colors = [
+    "#6366f1",
+    "#8b5cf6",
+    "#ec4899",
+    "#14b8a6",
+    "#f59e0b",
+    "#3b82f6",
+    "#10b981",
+  ];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length];
+}
+
 // --- GİRİŞ VƏ ÇAT ---
 btnCreate.addEventListener("click", () => {
   const data = getAuthData();
@@ -69,10 +93,32 @@ socket.on("room-joined", ({ roomCode, username }) => {
   currentUser = username;
   authScreen.classList.add("hidden");
   playerScreen.classList.remove("hidden");
+  document.body.classList.add("in-room");
   displayRoomCode.innerText = roomCode;
   displayUsername.innerText = username;
+  userAvatar.innerText = getAvatarInitial(username);
+  userAvatar.style.backgroundColor = getAvatarColor(username);
   resetChat();
+  updateVideoPlaceholder();
 });
+
+btnCopyRoom.addEventListener("click", async () => {
+  if (!currentRoom) return;
+  try {
+    await navigator.clipboard.writeText(currentRoom);
+    btnCopyRoom.classList.add("copied");
+    setTimeout(() => btnCopyRoom.classList.remove("copied"), 1500);
+  } catch {
+    alert("Kopyalama mümkün olmadı.");
+  }
+});
+
+function updateVideoPlaceholder() {
+  const hasStream =
+    videoPlayer.srcObject &&
+    videoPlayer.srcObject.getVideoTracks?.().length > 0;
+  playerWrapper.classList.toggle("has-stream", !!hasStream);
+}
 
 btnSendMsg.addEventListener("click", sendMsg);
 chatInput.addEventListener("keypress", (e) => {
@@ -127,26 +173,42 @@ socket.on("sys-message", (message) => {
   appendSystemMessage(message);
 });
 
+function createChatAvatar(senderName) {
+  const avatar = document.createElement("div");
+  avatar.className = "chat-avatar";
+  avatar.innerText = getAvatarInitial(senderName);
+  avatar.style.backgroundColor = getAvatarColor(senderName);
+  avatar.title = senderName;
+  return avatar;
+}
+
 function appendBubbleToChat(senderName, message, isMe) {
   const rowDiv = document.createElement("div");
   rowDiv.className = `chat-msg-row ${isMe ? "me" : "other"}`;
 
+  const avatar = createChatAvatar(senderName);
+
   const bubbleContainer = document.createElement("div");
   bubbleContainer.className = "chat-bubble-container";
 
-  if (!isMe) {
-    const senderSpan = document.createElement("span");
-    senderSpan.className = "chat-sender";
-    senderSpan.innerText = senderName;
-    bubbleContainer.appendChild(senderSpan);
-  }
+  const senderSpan = document.createElement("span");
+  senderSpan.className = "chat-sender";
+  senderSpan.innerText = isMe ? `${senderName} (Siz)` : senderName;
+  bubbleContainer.appendChild(senderSpan);
 
   const bubble = document.createElement("div");
   bubble.className = "chat-bubble";
   bubble.innerText = message;
-
   bubbleContainer.appendChild(bubble);
-  rowDiv.appendChild(bubbleContainer);
+
+  if (isMe) {
+    rowDiv.appendChild(bubbleContainer);
+    rowDiv.appendChild(avatar);
+  } else {
+    rowDiv.appendChild(avatar);
+    rowDiv.appendChild(bubbleContainer);
+  }
+
   appendToChat(rowDiv);
 }
 
@@ -164,6 +226,7 @@ btnShareScreen.addEventListener("click", async () => {
 
     videoPlayer.srcObject = localStream;
     videoPlayer.muted = true;
+    updateVideoPlaceholder();
 
     btnShareScreen.classList.add("hidden");
     btnStopShare.classList.remove("hidden");
@@ -184,6 +247,7 @@ function stopSharing() {
     localStream.getTracks().forEach((track) => track.stop());
   }
   videoPlayer.srcObject = null;
+  updateVideoPlaceholder();
   btnShareScreen.classList.remove("hidden");
   btnStopShare.classList.add("hidden");
 
@@ -239,6 +303,7 @@ socket.on("webrtc-offer", async ({ broadcasterId, sdp }) => {
   viewerConnection.ontrack = (event) => {
     videoPlayer.srcObject = event.streams[0];
     videoPlayer.muted = false;
+    updateVideoPlaceholder();
   };
 
   viewerConnection.onicecandidate = (event) => {
@@ -291,6 +356,7 @@ socket.on("webrtc-ice", async ({ sender, candidate }) => {
 // Yayımçı ayrıldıqda və ya paylaşımı dayandırdıqda
 socket.on("broadcaster-stopped", () => {
   videoPlayer.srcObject = null;
+  updateVideoPlaceholder();
   if (viewerConnection) {
     viewerConnection.close();
     viewerConnection = null;

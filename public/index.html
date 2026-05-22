@@ -4,6 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Watch-Together — WebRTC</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="style.css" />
     <script src="/socket.io/socket.io.js" defer></script>
     <script src="client.js" defer></script>
@@ -52,63 +58,149 @@
 
     <div id="player-screen" class="container hidden">
       <header class="player-header">
-        <div class="room-info">
-          <h2>Otaq: <span id="display-room-code">---</span></h2>
-          <span class="user-badge"
-            >İstifadəçi: <strong id="display-username">---</strong></span
-          >
+        <div class="header-left">
+          <div class="brand-mini" aria-hidden="true">WT</div>
+          <div class="room-meta">
+            <span class="room-label">Otaq kodu</span>
+            <button
+              id="btn-copy-room"
+              class="room-code-badge"
+              type="button"
+              title="Kodu kopyala"
+            >
+              <span id="display-room-code">---</span>
+              <svg
+                class="icon-sm"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <rect x="9" y="9" width="13" height="13" rx="2" />
+                <path
+                  d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+                />
+              </svg>
+            </button>
+          </div>
         </div>
-        <button id="btn-leave" class="btn btn-danger">Otaqdan Çıx</button>
+        <div class="header-right">
+          <div class="user-chip">
+            <div id="user-avatar" class="user-avatar">?</div>
+            <span id="display-username" class="user-name">---</span>
+          </div>
+          <button id="btn-leave" class="btn btn-ghost-danger" type="button">
+            <svg
+              class="icon-sm"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            Çıx
+          </button>
+        </div>
       </header>
 
       <main class="main-content">
         <section class="video-section">
-          <!-- WebRTC Ekran Paylaşım İdarəetməsi -->
-          <div
-            class="video-url-bar"
-            style="
-              justify-content: center;
-              background: transparent;
-              border: none;
-            "
-          >
+          <div class="video-toolbar">
             <button
               id="btn-share-screen"
-              class="btn btn-primary"
-              style="width: 100%"
+              class="btn btn-primary btn-toolbar"
+              type="button"
             >
-              🖥️ Filmi Açdığınız Tabı Paylaşın
+              <svg
+                class="icon-sm"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <rect x="2" y="3" width="20" height="14" rx="2" />
+                <line x1="8" y1="21" x2="16" y2="21" />
+                <line x1="12" y1="17" x2="12" y2="21" />
+              </svg>
+              Ekranı Paylaş
             </button>
             <button
               id="btn-stop-share"
-              class="btn btn-danger hidden"
-              style="width: 100%"
+              class="btn btn-danger btn-toolbar hidden"
+              type="button"
             >
-              ⏹️ Paylaşımı Dayandır
+              <svg
+                class="icon-sm"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+              </svg>
+              Paylaşımı Dayandır
             </button>
           </div>
 
           <div class="player-wrapper">
-            <!-- Artıq <source> yoxdur. WebRTC axını bura əlavə olunacaq -->
+            <div id="video-placeholder" class="video-placeholder">
+              <svg
+                class="placeholder-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+              >
+                <polygon points="5 3 19 12 5 21 5 3" />
+              </svg>
+              <p>Hələ heç nə paylaşılmayıb</p>
+              <span>Yayımçı ekran paylaşanda burada görünəcək</span>
+            </div>
             <video id="main-video" autoplay playsinline controls></video>
           </div>
         </section>
 
         <aside class="chat-section">
           <div class="chat-header">
-            <h3>Otaq Çatı</h3>
+            <div class="chat-header-icon" aria-hidden="true">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+                />
+              </svg>
+            </div>
+            <div>
+              <h3>Canlı Çat</h3>
+              <p class="chat-subtitle">Otaqdakılarla söhbət edin</p>
+            </div>
           </div>
-          <div id="chat-messages" class="chat-messages">
-            <div class="system-message">Otağa xoş gəlmisiniz!</div>
-          </div>
+          <div id="chat-messages" class="chat-messages"></div>
           <div class="chat-input-bar">
             <input
               type="text"
               id="chat-input"
-              placeholder="Mesajınızı yazın..."
+              class="chat-input-pill"
+              placeholder="Mesaj yazın..."
               autocomplete="off"
             />
-            <button id="btn-send-msg" class="btn btn-primary">Göndər</button>
+            <button
+              id="btn-send-msg"
+              class="btn-send-icon"
+              type="button"
+              aria-label="Göndər"
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+              </svg>
+            </button>
           </div>
         </aside>
       </main>
