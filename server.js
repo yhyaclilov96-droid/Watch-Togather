@@ -10,6 +10,7 @@ const io = new Server(server);
 app.use(express.static(path.join(__dirname, "public")));
 
 const rooms = {};
+const roomDeleteTimeouts = {};
 const MAX_CHAT_LENGTH = 2000;
 
 function buildUserListPayload(room) {
@@ -76,6 +77,11 @@ io.on("connection", (socket) => {
   socket.on("create-room", ({ username, roomCode, password }) => {
     if (!username || !roomCode || !password) return;
 
+    if (roomDeleteTimeouts[roomCode]) {
+      clearTimeout(roomDeleteTimeouts[roomCode]);
+      delete roomDeleteTimeouts[roomCode];
+    }
+
     if (rooms[roomCode])
       return socket.emit("error-msg", "Bu otaq kodu artıq mövcuddur.");
 
@@ -94,6 +100,11 @@ io.on("connection", (socket) => {
 
   socket.on("join-room", ({ username, roomCode, password }) => {
     if (!username || !roomCode || !password) return;
+
+    if (roomDeleteTimeouts[roomCode]) {
+      clearTimeout(roomDeleteTimeouts[roomCode]);
+      delete roomDeleteTimeouts[roomCode];
+    }
 
     const room = rooms[roomCode];
     if (!room) return socket.emit("error-msg", "Otaq tapılmadı.");
@@ -118,6 +129,11 @@ io.on("connection", (socket) => {
 
   socket.on("rejoin-room", ({ username, roomCode, password }) => {
     if (!username || !roomCode || !password) return;
+
+    if (roomDeleteTimeouts[roomCode]) {
+      clearTimeout(roomDeleteTimeouts[roomCode]);
+      delete roomDeleteTimeouts[roomCode];
+    }
 
     const room = rooms[roomCode];
     if (!room) {
@@ -237,7 +253,12 @@ io.on("connection", (socket) => {
     }
 
     if (room.users.length === 0) {
-      delete rooms[roomCode];
+      if (!roomDeleteTimeouts[roomCode]) {
+        roomDeleteTimeouts[roomCode] = setTimeout(() => {
+          delete rooms[roomCode];
+          delete roomDeleteTimeouts[roomCode];
+        }, 30000);
+      }
     } else {
       emitUserList(roomCode);
     }

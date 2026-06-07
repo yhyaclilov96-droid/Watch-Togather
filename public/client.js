@@ -241,10 +241,6 @@ socket.on("disconnect", (reason) => {
   }
 });
 
-socket.on("reconnect", () => {
-  attemptRejoin();
-});
-
 socket.on("reconnect_failed", () => {
   isRejoining = false;
   showConnectionBanner("Serverə qoşulmaq mümkün olmadı.");
@@ -294,8 +290,16 @@ function sendMsg() {
   if (msg) {
     socket.emit("send-chat", { message: msg });
     chatInput.value = "";
+    chatInput.focus();
+    chatMessages.scrollTop = chatMessages.scrollHeight;
   }
 }
+
+chatInput.addEventListener("focus", () => {
+  setTimeout(() => {
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }, 50);
+});
 
 // --- ÇAT MƏNTİQİ (Şar / Bubble Sistemi) ---
 const MAX_CHAT_MESSAGES = 100;
